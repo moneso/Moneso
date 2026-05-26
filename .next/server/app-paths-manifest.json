@@ -1,0 +1,6 @@
+{
+  "/swap/page": "app/swap/page.js",
+  "/page": "app/page.js",
+  "/guides/page": "app/guides/page.js",
+  "/news/page": "app/news/page.js"
+}

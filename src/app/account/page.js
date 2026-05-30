@@ -13,6 +13,9 @@ export default function AccountPage() {
   const [listings, setListings] = useState([])
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(true)
+  const [xmrAddress, setXmrAddress] = useState('')
+  const [savingAddress, setSavingAddress] = useState(false)
+  const [addressSaved, setAddressSaved] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -29,9 +32,18 @@ export default function AccountPage() {
       supabase.from('trades').select('*').or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).order('created_at', { ascending: false }).limit(10),
     ])
     setProfile(prof)
+    setXmrAddress(prof?.xmr_address || '')
     setListings(list || [])
     setTrades(tr || [])
     setLoading(false)
+  }
+
+  async function saveXmrAddress() {
+    setSavingAddress(true)
+    await supabase.from('profiles').update({ xmr_address: xmrAddress }).eq('id', user.id)
+    setSavingAddress(false)
+    setAddressSaved(true)
+    setTimeout(() => setAddressSaved(false), 3000)
   }
 
   async function deleteListing(id) {
@@ -57,13 +69,14 @@ export default function AccountPage() {
       </nav>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
+        {/* Profile header */}
         <div className="flex items-center gap-4 mb-10">
           <div className="w-14 h-14 rounded-full bg-zinc-900 flex items-center justify-center text-2xl font-bold text-[#FF6600]">
             {profile?.username?.[0]?.toUpperCase()}
           </div>
           <div>
             <h1 className="text-2xl font-bold">{profile?.username}</h1>
-            <p className="text-zinc-500 text-sm">{profile?.trade_count} trades</p>
+            <p className="text-zinc-500 text-sm">{profile?.trade_count} trades · Member since {new Date(profile?.created_at).getFullYear()}</p>
           </div>
           <Link href="/marketplace/create" className="ml-auto bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold px-5 py-2.5 rounded-xl text-sm transition-colors">
             + Post Offer
@@ -71,10 +84,40 @@ export default function AccountPage() {
         </div>
 
         <div className="space-y-8">
+          {/* XMR Wallet */}
+          <div className="border border-zinc-800 rounded-xl p-6">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500 mb-1">Your Monero Wallet</h2>
+            <p className="text-xs text-zinc-600 mb-4">Buyers will send XMR to this address when you're selling. Required to trade.</p>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={xmrAddress}
+                onChange={e => setXmrAddress(e.target.value)}
+                placeholder="4... (your XMR receiving address)"
+                className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF6600] placeholder-zinc-600 font-mono"
+              />
+              <button
+                onClick={saveXmrAddress}
+                disabled={savingAddress}
+                className={`px-5 py-3 rounded-xl text-sm font-bold transition-colors ${
+                  addressSaved
+                    ? 'bg-green-500 text-black'
+                    : 'bg-[#FF6600] hover:bg-[#e55a00] text-black'
+                } disabled:opacity-50`}
+              >
+                {savingAddress ? '...' : addressSaved ? '✓ Saved!' : 'Save'}
+              </button>
+            </div>
+            {xmrAddress && (
+              <p className="text-xs text-zinc-600 mt-2 font-mono truncate">{xmrAddress}</p>
+            )}
+          </div>
+
+          {/* Listings */}
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500 mb-4">My Listings</h2>
             {listings.length === 0 ? (
-              <p className="text-zinc-600 text-sm">No listings yet. <Link href="/marketplace/create" className="text-[#FF6600] hover:underline">Post your first offer</Link></p>
+              <p className="text-zinc-600 text-sm">No listings yet. <Link href="/marketplace/create" className="text-[#FF6600] hover:underline">Post your first offer →</Link></p>
             ) : (
               <div className="space-y-3">
                 {listings.map(listing => {
@@ -109,6 +152,7 @@ export default function AccountPage() {
             )}
           </div>
 
+          {/* Trades */}
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500 mb-4">Recent Trades</h2>
             {trades.length === 0 ? (

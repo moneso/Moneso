@@ -7,6 +7,7 @@ const links = [
   { href: "/", label: "Markets" },
   { href: "/swap", label: "How to Buy" },
   { href: "/guides", label: "Guides" },
+  { href: "/marketplace", label: "Marketplace" },
   { href: "/news", label: "News" },
 ];
 

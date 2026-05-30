@@ -284,10 +284,6 @@ export default function ListingPage() {
                         {copied ? '✓ Copied!' : 'Copy Address'}
                       </button>
                     </div>
-                    <button onClick={() => updateTradeStatus('funded')}
-                      className="w-full bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold py-3 rounded-xl text-sm transition-colors mt-3">
-                      I've Sent XMR to Escrow ✓
-                    </button>
                   )}
 
                   {/* Waiting for escrow — shown to buyer when pending */}

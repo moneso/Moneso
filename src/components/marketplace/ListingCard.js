@@ -23,7 +23,7 @@ export default function ListingCard({ listing, currentXmrPrice }) {
           </div>
           <div>
             <p className="text-white text-sm font-medium">{listing.profiles.username}</p>
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <div className="flex items-center gap-2 text-xs text-zinc-300">
               <span>{listing.profiles.trade_count} trades</span>
               <span>·</span>
               <span className={rep.score >= 90 ? 'text-green-400' : rep.score >= 70 ? 'text-yellow-400' : 'text-red-400'}>
@@ -36,7 +36,7 @@ export default function ListingCard({ listing, currentXmrPrice }) {
         {/* Online indicator */}
         <div className="flex items-center gap-1.5">
           <div className={`w-1.5 h-1.5 rounded-full ${listing.profiles.is_online ? 'bg-green-400' : 'bg-zinc-600'}`} />
-          <span className="text-xs text-zinc-500">{listing.profiles.is_online ? 'online' : 'offline'}</span>
+          <span className="text-xs text-zinc-300">{listing.profiles.is_online ? 'online' : 'offline'}</span>
         </div>
       </div>
 
@@ -54,17 +54,17 @@ export default function ListingCard({ listing, currentXmrPrice }) {
       <div className="flex items-end justify-between">
         <div>
           <p className="text-[#FF6600] font-bold text-lg">
-            {price ? `${currency.symbol}${price.toLocaleString('en', { maximumFractionDigits: 0 })}` : '—'} <span className="text-sm font-normal text-zinc-400">/ XMR</span>
+            {price ? `${currency.symbol}${price.toLocaleString('en', { maximumFractionDigits: 0 })}` : '—'} <span className="text-sm font-normal text-zinc-300">/ XMR</span>
           </p>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-300 mt-0.5">
             {listing.margin > 0 ? `+${listing.margin}%` : listing.margin < 0 ? `${listing.margin}%` : 'at market'} · {listing.currency}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-300">
             {currency.symbol}{listing.min_amount.toLocaleString()} – {currency.symbol}{listing.max_amount.toLocaleString()}
           </p>
-          <p className="text-xs text-zinc-600">limit</p>
+          <p className="text-xs text-zinc-300">limit</p>
         </div>
       </div>
 

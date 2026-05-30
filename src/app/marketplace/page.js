@@ -61,7 +61,7 @@ export default function MarketplacePage() {
         <Link href="/" className="font-bold text-lg tracking-widest hover:text-[#FF6600] transition-colors">
           MONE.SO
         </Link>
-        <div className="flex items-center gap-6 text-sm text-zinc-400">
+        <div className="flex items-center gap-6 text-sm text-zinc-300">
           <Link href="/" className="hover:text-white transition-colors">Markets</Link>
           <Link href="/marketplace" className="text-[#FF6600]">Marketplace</Link>
           <Link href="/guides" className="hover:text-white transition-colors">Guides</Link>
@@ -82,9 +82,9 @@ export default function MarketplacePage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-1">P2P Marketplace</h1>
-          <p className="text-zinc-500 text-sm">Buy and sell Monero privately. No KYC. No intermediaries.</p>
+          <p className="text-zinc-300 text-sm">Buy and sell Monero privately. No KYC. No intermediaries.</p>
           {currentPrice && (
-            <p className="text-xs text-zinc-600 mt-1">
+            <p className="text-xs text-zinc-300 mt-1">
               Market price: <span className="text-[#FF6600]">{currency} {currentPrice.toLocaleString('en', { maximumFractionDigits: 2 })}</span> / XMR
             </p>
           )}
@@ -95,17 +95,17 @@ export default function MarketplacePage() {
           <div className="flex flex-wrap gap-4 items-end">
             {/* Buy / Sell toggle */}
             <div>
-              <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">I want to</label>
+              <label className="block text-xs text-zinc-300 uppercase tracking-wider mb-2">I want to</label>
               <div className="flex border border-zinc-800 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setType('sell')}
-                  className={`px-5 py-2 text-sm font-medium transition-colors ${type === 'sell' ? 'bg-[#FF6600] text-black' : 'text-zinc-400 hover:text-white'}`}
+                  className={`px-5 py-2 text-sm font-medium transition-colors ${type === 'sell' ? 'bg-[#FF6600] text-black' : 'text-zinc-300 hover:text-white'}`}
                 >
                   Buy XMR
                 </button>
                 <button
                   onClick={() => setType('buy')}
-                  className={`px-5 py-2 text-sm font-medium transition-colors ${type === 'buy' ? 'bg-green-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                  className={`px-5 py-2 text-sm font-medium transition-colors ${type === 'buy' ? 'bg-green-500 text-black' : 'text-zinc-300 hover:text-white'}`}
                 >
                   Sell XMR
                 </button>
@@ -114,7 +114,7 @@ export default function MarketplacePage() {
 
             {/* Currency */}
             <div>
-              <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Currency</label>
+              <label className="block text-xs text-zinc-300 uppercase tracking-wider mb-2">Currency</label>
               <select
                 value={currency}
                 onChange={e => setCurrency(e.target.value)}
@@ -128,7 +128,7 @@ export default function MarketplacePage() {
 
             {/* Payment method */}
             <div>
-              <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Payment Method</label>
+              <label className="block text-xs text-zinc-300 uppercase tracking-wider mb-2">Payment Method</label>
               <select
                 value={paymentMethod}
                 onChange={e => setPaymentMethod(e.target.value)}
@@ -143,7 +143,7 @@ export default function MarketplacePage() {
 
             {/* Amount */}
             <div>
-              <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Amount ({currency})</label>
+              <label className="block text-xs text-zinc-300 uppercase tracking-wider mb-2">Amount ({currency})</label>
               <input
                 type="number"
                 value={amount}
@@ -164,10 +164,10 @@ export default function MarketplacePage() {
 
         {/* Results */}
         {loading ? (
-          <div className="text-center py-20 text-zinc-600">Loading offers...</div>
+          <div className="text-center py-20 text-zinc-300">Loading offers...</div>
         ) : listings.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-zinc-500 mb-4">No offers found for these filters.</p>
+            <p className="text-zinc-300 mb-4">No offers found for these filters.</p>
             {user && (
               <Link href="/marketplace/create" className="text-[#FF6600] text-sm hover:underline">
                 Be the first to post an offer →
@@ -176,7 +176,7 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-zinc-600 mb-4">{listings.length} offer{listings.length !== 1 ? 's' : ''} found</p>
+            <p className="text-xs text-zinc-300 mb-4">{listings.length} offer{listings.length !== 1 ? 's' : ''} found</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {listings.map(listing => (
                 <ListingCard key={listing.id} listing={listing} currentXmrPrice={currentPrice} />

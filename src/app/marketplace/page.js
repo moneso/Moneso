@@ -72,7 +72,9 @@ export default function MarketplacePage() {
             </Link>
           ) : (
             <Link href="/auth" className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-4 py-1.5 rounded-lg text-xs transition-colors">
-              Login
+              Login</Link>
+          ) : null}
+          <Link href="/account" className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-4 py-1.5 rounded-lg text-xs transition-colors">Account
             </Link>
           )}
         </div>

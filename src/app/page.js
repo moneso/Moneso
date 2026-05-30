@@ -13,7 +13,7 @@ function StatCard({ label, value, sub, highlight }) {
     <div className="border border-border px-5 py-4 fade-up"
       style={{ background: "#0a0a0a" }}>
       <div className="font-mono text-xs tracking-widest uppercase mb-2"
-        style={{ fontFamily: "var(--font-mono)", color: "#3a3a3a" }}>
+        style={{ fontFamily: "var(--font-mono)", color: "#666" }}>
         {label}
       </div>
       <div className="font-mono text-xl font-medium"
@@ -22,7 +22,7 @@ function StatCard({ label, value, sub, highlight }) {
       </div>
       {sub && (
         <div className="font-mono text-xs mt-1"
-          style={{ fontFamily: "var(--font-mono)", color: "#3a3a3a" }}>
+          style={{ fontFamily: "var(--font-mono)", color: "#666" }}>
           {sub}
         </div>
       )}
@@ -83,7 +83,7 @@ export default function Home() {
         {/* Hero price */}
         <div className="mb-12 fade-up">
           <div className="font-mono text-xs tracking-widest uppercase mb-3"
-            style={{ fontFamily: "var(--font-mono)", color: "#3a3a3a" }}>
+            style={{ fontFamily: "var(--font-mono)", color: "#666" }}>
             Monero — XMR / USD
           </div>
           <div className="flex items-baseline gap-5 flex-wrap">
@@ -179,7 +179,7 @@ export default function Home() {
                 style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "#F5ECD7" }}>
                 {card.title}
               </div>
-              <p className="text-sm leading-relaxed mb-4" style={{ color: "#444" }}>
+              <p className="text-sm leading-relaxed mb-4" style={{ color: "#888" }}>
                 {card.desc}
               </p>
               <span className="font-mono text-xs tracking-widest"

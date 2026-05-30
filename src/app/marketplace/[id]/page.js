@@ -78,6 +78,7 @@ export default function ListingPage() {
       const currentPrice = xmrPrice?.[listing.currency.toLowerCase()] || 1
       const effectivePrice = currentPrice * (1 + listing.margin / 100)
       const PLATFORM_FEE = 0.01
+      const PLATFORM_WALLET = "8AJtLM2m2EFKJwzBsUm9ce5nKroU5YiNuBS1Z4wksTLRXv7ssVYdUHZ8PhLbNXvwu5eqaeeDf94AW3jq7cVNP2BdBN4tXUy"
       const xmrAmt = (fiatAmt / effectivePrice) * (1 - PLATFORM_FEE)
 
       const isBuyerMe = listing.type === 'sell'  // listing is selling XMR → I'm buying
@@ -319,7 +320,7 @@ export default function ListingPage() {
                     />
                     {amount && effectivePrice && (
                       <p className="text-xs text-zinc-400 mt-1.5">
-                        You receive (after 1% fee): <span className="text-[#FF6600] font-bold">{(parseFloat(amount) / effectivePrice).toFixed(6)} XMR</span>
+                        You receive: <span className="text-[#FF6600] font-bold">{(parseFloat(amount) / effectivePrice).toFixed(6)} XMR</span>
                       </p>
                     )}
                   </div>

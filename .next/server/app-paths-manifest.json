@@ -1,6 +1,12 @@
 {
-  "/swap/page": "app/swap/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/account/page": "app/account/page.js",
+  "/marketplace/page": "app/marketplace/page.js",
+  "/auth/page": "app/auth/page.js",
   "/page": "app/page.js",
+  "/marketplace/create/page": "app/marketplace/create/page.js",
+  "/marketplace/[id]/page": "app/marketplace/[id]/page.js",
+  "/news/page": "app/news/page.js",
   "/guides/page": "app/guides/page.js",
-  "/news/page": "app/news/page.js"
+  "/swap/page": "app/swap/page.js"
 }

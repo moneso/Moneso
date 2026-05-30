@@ -67,7 +67,7 @@ export default function MarketplacePage() {
           <Link href="/guides" className="hover:text-white transition-colors">Guides</Link>
           <Link href="/news" className="hover:text-white transition-colors">News</Link>
           {user ? (
-            <Link href="/marketplace/create" className="bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold px-4 py-1.5 rounded-lg text-xs transition-colors">
+            <Link href="/account" className="text-zinc-400 hover:text-white text-sm transition-colors mr-2">Account</a> <a href="/marketplace/create" className="bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold px-4 py-1.5 rounded-lg text-xs transition-colors">
               + Post Offer
             </Link>
           ) : (

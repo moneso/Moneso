@@ -4,7 +4,10 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import TradeChat from '@/components/marketplace/TradeChat'
-import { getPaymentMethod, getCurrency, formatReputation, TRADE_STATUS } from '@/lib/constants'
+import { getPaymentMethod, getCurrency, TRADE_STATUS } from '@/lib/constants'
+
+const ESCROW_ADDRESS = '45tdEMiE6MYTUnYwZm9W4yN3v7JXifEgDWZXdjApR1TUcaz59L28fpmcKVSX1vLhK7YgxpC6C18DEFEXRTErUcqB4iCZPwF'
+const PLATFORM_FEE = 0.01
 
 export default function ListingPage() {
   const { id } = useParams()
@@ -14,11 +17,12 @@ export default function ListingPage() {
   const [listing, setListing] = useState(null)
   const [user, setUser] = useState(null)
   const [xmrPrice, setXmrPrice] = useState(null)
-  const [trade, setTrade] = useState(null)         // active trade for this listing+user
+  const [trade, setTrade] = useState(null)
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data?.user))
@@ -30,10 +34,23 @@ export default function ListingPage() {
     if (user) fetchActiveTrade()
   }, [user, id])
 
+  // Realtime trade updates
+  useEffect(() => {
+    if (!trade) return
+    const channel = supabase
+      .channel(`trade-status-${trade.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'trades',
+        filter: `id=eq.${trade.id}`
+      }, (payload) => setTrade(payload.new))
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [trade?.id])
+
   async function fetchListing() {
     const { data } = await supabase
       .from('listings')
-      .select('*, profiles(username, trade_count, positive_feedback, negative_feedback, is_online, created_at)')
+      .select('*, profiles(username, trade_count, positive_feedback, negative_feedback, is_online, created_at, xmr_address)')
       .eq('id', id)
       .single()
     setListing(data)
@@ -64,24 +81,19 @@ export default function ListingPage() {
   async function startTrade() {
     if (!user) { router.push('/auth'); return }
     if (!amount || parseFloat(amount) <= 0) { setError('Enter a valid amount.'); return }
-
     const fiatAmt = parseFloat(amount)
     if (fiatAmt < listing.min_amount || fiatAmt > listing.max_amount) {
       setError(`Amount must be between ${listing.min_amount} and ${listing.max_amount} ${listing.currency}`)
       return
     }
-
     setError('')
     setStarting(true)
-
     try {
       const currentPrice = xmrPrice?.[listing.currency.toLowerCase()] || 1
       const effectivePrice = currentPrice * (1 + listing.margin / 100)
-      const PLATFORM_FEE = 0.01
-      const PLATFORM_WALLET = "8AJtLM2m2EFKJwzBsUm9ce5nKroU5YiNuBS1Z4wksTLRXv7ssVYdUHZ8PhLbNXvwu5eqaeeDf94AW3jq7cVNP2BdBN4tXUy"
       const xmrAmt = (fiatAmt / effectivePrice) * (1 - PLATFORM_FEE)
-
-      const isBuyerMe = listing.type === 'sell'  // listing is selling XMR → I'm buying
+      const paymentId = id.replace(/-/g, '').substring(0, 16) + Date.now().toString(16).substring(0, 4)
+      const isBuyerMe = listing.type === 'sell'
 
       const { data, error: tradeError } = await supabase
         .from('trades')
@@ -94,6 +106,8 @@ export default function ListingPage() {
           xmr_price_at_creation: effectivePrice,
           payment_method: listing.payment_method,
           currency: listing.currency,
+          escrow_address: ESCROW_ADDRESS,
+          escrow_payment_id: paymentId,
           status: 'pending',
         })
         .select()
@@ -101,7 +115,6 @@ export default function ListingPage() {
 
       if (tradeError) throw tradeError
 
-      // System message
       await supabase.from('messages').insert({
         trade_id: data.id,
         sender_id: user.id,
@@ -124,16 +137,19 @@ export default function ListingPage() {
       .eq('id', trade.id)
       .select()
       .single()
-
-    // System message
     await supabase.from('messages').insert({
       trade_id: trade.id,
       sender_id: user.id,
-      content: `Status updated: ${TRADE_STATUS[newStatus]?.label}`,
+      content: `Status: ${TRADE_STATUS[newStatus]?.label}`,
       is_system: true,
     })
-
     setTrade(data)
+  }
+
+  function copyAddress() {
+    navigator.clipboard.writeText(ESCROW_ADDRESS)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-zinc-600">Loading...</div>
@@ -141,158 +157,221 @@ export default function ListingPage() {
 
   const pm = getPaymentMethod(listing.payment_method)
   const currency = getCurrency(listing.currency)
-  const rep = formatReputation(listing.profiles)
   const currentPrice = xmrPrice?.[listing.currency.toLowerCase()]
   const effectivePrice = currentPrice ? currentPrice * (1 + listing.margin / 100) : null
   const isOwnListing = user?.id === listing.trader_id
+  const isSeller = trade && user?.id === trade.seller_id
+  const isBuyer = trade && user?.id === trade.buyer_id
+
+  // Trade steps
+  const steps = [
+    { key: 'pending', label: 'Trade started' },
+    { key: 'funded', label: 'XMR in escrow' },
+    { key: 'paid', label: 'Payment sent' },
+    { key: 'completed', label: 'Complete' },
+  ]
+  const currentStep = steps.findIndex(s => s.key === trade?.status)
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Nav */}
       <nav className="border-b border-zinc-900 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-widest hover:text-[#FF6600] transition-colors">MONE.SO</Link>
-        <Link href="/marketplace" className="text-zinc-400 hover:text-white text-sm transition-colors">← Marketplace</Link>
+        <Link href="/" className="font-bold text-lg tracking-widest hover:text-[#FF6600]">MONE.SO</Link>
+        <Link href="/marketplace" className="text-zinc-400 hover:text-white text-sm">← Marketplace</Link>
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
           {/* Left: Listing details */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Offer header */}
+          <div className="lg:col-span-3 space-y-5">
             <div className="border border-zinc-800 rounded-xl p-6">
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-md mr-2 ${listing.type === 'sell' ? 'bg-[#FF6600]/10 text-[#FF6600]' : 'bg-green-400/10 text-green-400'}`}>
-                    {listing.type === 'sell' ? 'SELLING XMR' : 'BUYING XMR'}
-                  </span>
-                  <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded-md">{pm.icon} {pm.label}</span>
-                </div>
-                {!listing.is_active && (
-                  <span className="text-xs text-zinc-500 bg-zinc-900 px-3 py-1 rounded-full">Inactive</span>
-                )}
+              <div className="flex items-center gap-2 mb-5">
+                <span className={`text-xs font-bold px-2 py-1 rounded-md ${listing.type === 'sell' ? 'bg-[#FF6600]/10 text-[#FF6600]' : 'bg-green-400/10 text-green-400'}`}>
+                  {listing.type === 'sell' ? 'SELLING XMR' : 'BUYING XMR'}
+                </span>
+                <span className="text-xs bg-zinc-900 text-zinc-300 px-2 py-1 rounded-md">{pm.icon} {pm.label}</span>
               </div>
+              <p className="text-4xl font-bold text-[#FF6600] mb-1">
+                {effectivePrice ? `${currency.symbol}${effectivePrice.toLocaleString('en', { maximumFractionDigits: 2 })}` : '—'}
+                <span className="text-lg text-zinc-400 font-normal ml-2">/ XMR</span>
+              </p>
+              <p className="text-sm text-zinc-500 mb-5">{listing.margin > 0 ? `+${listing.margin}%` : listing.margin < 0 ? `${listing.margin}%` : 'at market'} above market</p>
 
-              {/* Price */}
-              <div className="mb-5">
-                <p className="text-4xl font-bold text-[#FF6600]">
-                  {effectivePrice ? `${currency.symbol}${effectivePrice.toLocaleString('en', { maximumFractionDigits: 2 })}` : '—'}
-                  <span className="text-lg text-zinc-400 font-normal ml-2">/ XMR</span>
-                </p>
-                <p className="text-sm text-zinc-500 mt-1">
-                  {listing.margin > 0 ? `+${listing.margin}%` : listing.margin < 0 ? `${listing.margin}%` : 'at market'} above market price
-                </p>
-              </div>
-
-              {/* Details grid */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm mb-5">
                 <div className="bg-zinc-950 rounded-lg p-3">
-                  <p className="text-zinc-500 text-xs mb-1">Trade Limits</p>
-                  <p className="text-white">{currency.symbol}{listing.min_amount} – {currency.symbol}{listing.max_amount}</p>
+                  <p className="text-zinc-500 text-xs mb-1">Limits</p>
+                  <p>{currency.symbol}{listing.min_amount} – {currency.symbol}{listing.max_amount}</p>
                 </div>
                 <div className="bg-zinc-950 rounded-lg p-3">
-                  <p className="text-zinc-500 text-xs mb-1">Payment Window</p>
-                  <p className="text-white">{listing.payment_window_minutes} minutes</p>
-                </div>
-                <div className="bg-zinc-950 rounded-lg p-3">
-                  <p className="text-zinc-500 text-xs mb-1">Currency</p>
-                  <p className="text-white">{listing.currency}</p>
-                </div>
-                <div className="bg-zinc-950 rounded-lg p-3">
-                  <p className="text-zinc-500 text-xs mb-1">Payment Method</p>
-                  <p className="text-white">{pm.icon} {pm.label}</p>
+                  <p className="text-zinc-500 text-xs mb-1">Payment window</p>
+                  <p>{listing.payment_window_minutes} min</p>
                 </div>
               </div>
 
-              {/* Terms */}
               {listing.terms && (
-                <div className="mt-4 bg-zinc-950 rounded-lg p-4">
-                  <p className="text-zinc-500 text-xs mb-2 uppercase tracking-wider">Trader's Terms</p>
-                  <p className="text-zinc-300 text-sm leading-relaxed">{listing.terms}</p>
+                <div className="bg-zinc-950 rounded-lg p-4">
+                  <p className="text-zinc-500 text-xs mb-2 uppercase tracking-wider">Terms</p>
+                  <p className="text-zinc-300 text-sm">{listing.terms}</p>
                 </div>
               )}
             </div>
 
-            {/* Trader profile */}
-            <div className="border border-zinc-800 rounded-xl p-6">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-4">Trader</p>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center text-xl font-bold text-[#FF6600]">
+            {/* Trader */}
+            <div className="border border-zinc-800 rounded-xl p-5">
+              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Trader</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center font-bold text-[#FF6600]">
                   {listing.profiles.username[0].toUpperCase()}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-white font-bold">{listing.profiles.username}</p>
-                    <div className={`w-2 h-2 rounded-full ${listing.profiles.is_online ? 'bg-green-400' : 'bg-zinc-600'}`} />
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-zinc-500 mt-0.5">
-                    <span>{listing.profiles.trade_count} trades</span>
-                    <span className={rep.score >= 90 ? 'text-green-400' : 'text-yellow-400'}>
-                      {rep.score}% positive
-                    </span>
-                    <span>Member since {new Date(listing.profiles.created_at).getFullYear()}</span>
-                  </div>
+                  <p className="font-bold">{listing.profiles.username}</p>
+                  <p className="text-sm text-zinc-500">{listing.profiles.trade_count} trades · Member since {new Date(listing.profiles.created_at).getFullYear()}</p>
                 </div>
+                <div className={`ml-auto w-2 h-2 rounded-full ${listing.profiles.is_online ? 'bg-green-400' : 'bg-zinc-600'}`} />
               </div>
             </div>
           </div>
 
-          {/* Right: Trade panel + chat */}
+          {/* Right: Trade panel */}
           <div className="lg:col-span-2 space-y-4">
             {trade ? (
-              /* Active trade panel */
-              <div className="border border-zinc-800 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold">Active Trade</p>
-                  <span className={`text-xs font-bold ${TRADE_STATUS[trade.status]?.color}`}>
-                    {TRADE_STATUS[trade.status]?.label}
-                  </span>
-                </div>
-
-                <div className="bg-zinc-950 rounded-lg p-4 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">You pay</span>
-                    <span className="text-white font-medium">{currency.symbol}{trade.fiat_amount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">You receive</span>
-                    <span className="text-[#FF6600] font-bold">{trade.xmr_amount} XMR</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Rate</span>
-                    <span className="text-white">{currency.symbol}{trade.xmr_price_at_creation.toLocaleString('en', { maximumFractionDigits: 2 })}</span>
+              <div className="space-y-4">
+                {/* Progress */}
+                <div className="border border-zinc-800 rounded-xl p-5">
+                  <p className="text-sm font-bold mb-4">Trade Progress</p>
+                  <div className="space-y-2">
+                    {steps.map((step, i) => (
+                      <div key={step.key} className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          i < currentStep ? 'bg-green-500 text-black' :
+                          i === currentStep ? 'bg-[#FF6600] text-black' :
+                          'bg-zinc-800 text-zinc-500'
+                        }`}>
+                          {i < currentStep ? '✓' : i + 1}
+                        </div>
+                        <p className={`text-sm ${i <= currentStep ? 'text-white' : 'text-zinc-600'}`}>{step.label}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Status actions */}
-                {trade.status === 'pending' && user?.id === trade.seller_id && (
-                  <button onClick={() => updateTradeStatus('funded')}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg text-sm transition-colors">
-                    I've sent XMR to Escrow ✓
-                  </button>
-                )}
-                {trade.status === 'funded' && user?.id === trade.buyer_id && (
-                  <button onClick={() => updateTradeStatus('paid')}
-                    className="w-full bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold py-3 rounded-lg text-sm transition-colors">
-                    I've Sent Payment ✓
-                  </button>
-                )}
-                {trade.status === 'paid' && user?.id === trade.seller_id && (
-                  <button onClick={() => updateTradeStatus('completed')}
-                    className="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-3 rounded-lg text-sm transition-colors">
-                    Release XMR ✓
-                  </button>
-                )}
-                {['pending', 'funded'].includes(trade.status) && (
-                  <button onClick={() => updateTradeStatus('cancelled')}
-                    className="w-full border border-zinc-700 hover:border-red-400/50 text-zinc-400 hover:text-red-400 py-2.5 rounded-lg text-sm transition-colors">
-                    Cancel Trade
-                  </button>
-                )}
-                {['funded', 'paid'].includes(trade.status) && (
-                  <button onClick={() => updateTradeStatus('disputed')}
-                    className="w-full border border-zinc-700 hover:border-yellow-400/50 text-zinc-400 hover:text-yellow-400 py-2.5 rounded-lg text-xs transition-colors">
-                    Open Dispute
-                  </button>
+                {/* Trade details */}
+                <div className="border border-zinc-800 rounded-xl p-5">
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Amount</span>
+                      <span className="text-[#FF6600] font-bold">{trade.xmr_amount} XMR</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">You pay</span>
+                      <span>{currency.symbol}{trade.fiat_amount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Rate</span>
+                      <span>{currency.symbol}{trade.xmr_price_at_creation?.toLocaleString('en', { maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+
+                  {/* Escrow address — shown to seller when pending */}
+                  {isSeller && trade.status === 'pending' && (
+                    <div className="bg-zinc-950 border border-[#FF6600]/20 rounded-lg p-4 mb-4">
+                      <p className="text-xs text-[#FF6600] uppercase tracking-wider mb-2">⚠️ Send XMR to Escrow</p>
+                      <p className="text-xs text-zinc-400 mb-3">Send exactly <span className="text-white font-bold">{trade.xmr_amount} XMR</span> to this escrow address. The funds will be locked until the buyer confirms payment.</p>
+                      <div className="bg-black rounded-lg p-3 font-mono text-xs text-zinc-300 break-all mb-2">
+                        {ESCROW_ADDRESS}
+                      </div>
+                      <button onClick={copyAddress} className={`w-full py-2 rounded-lg text-xs font-bold transition-colors ${copied ? 'bg-green-500 text-black' : 'bg-zinc-800 hover:bg-zinc-700 text-white'}`}>
+                        {copied ? '✓ Copied!' : 'Copy Address'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Waiting for escrow — shown to buyer when pending */}
+                  {isBuyer && trade.status === 'pending' && (
+                    <div className="bg-zinc-950 border border-zinc-700 rounded-lg p-4 mb-4">
+                      <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2">⏳ Waiting for seller</p>
+                      <p className="text-sm text-zinc-300">The seller needs to send <span className="text-[#FF6600] font-bold">{trade.xmr_amount} XMR</span> to escrow first. You'll be notified automatically.</p>
+                    </div>
+                  )}
+
+                  {/* Escrow funded — send payment now */}
+                  {isBuyer && trade.status === 'funded' && (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-4">
+                      <p className="text-xs text-green-400 uppercase tracking-wider mb-2">✅ XMR in Escrow</p>
+                      <p className="text-sm text-zinc-300">
+                        Send <span className="text-white font-bold">{currency.symbol}{trade.fiat_amount}</span> via <span className="text-white font-bold">{pm.label}</span> to the seller, then click "I've Paid".
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Seller waiting for payment */}
+                  {isSeller && trade.status === 'funded' && (
+                    <div className="bg-zinc-950 border border-zinc-700 rounded-lg p-4 mb-4">
+                      <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2">⏳ Waiting for payment</p>
+                      <p className="text-sm text-zinc-300">XMR is locked in escrow. Waiting for buyer to send <span className="text-white font-bold">{currency.symbol}{trade.fiat_amount}</span> via {pm.label}.</p>
+                    </div>
+                  )}
+
+                  {/* Payment sent — seller releases */}
+                  {isSeller && trade.status === 'paid' && (
+                    <div className="bg-[#FF6600]/10 border border-[#FF6600]/20 rounded-lg p-4 mb-4">
+                      <p className="text-xs text-[#FF6600] uppercase tracking-wider mb-2">💰 Payment Received?</p>
+                      <p className="text-sm text-zinc-300">Check your {pm.label} account. If you received <span className="text-white font-bold">{currency.symbol}{trade.fiat_amount}</span>, release the XMR to the buyer.</p>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  {isSeller && trade.status === 'funded' && (
+                    <p className="text-xs text-zinc-600 text-center mb-3">XMR is safely locked. Waiting for buyer payment.</p>
+                  )}
+
+                  {isBuyer && trade.status === 'funded' && (
+                    <button onClick={() => updateTradeStatus('paid')}
+                      className="w-full bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold py-3 rounded-xl text-sm transition-colors mb-2">
+                      I've Sent Payment ✓
+                    </button>
+                  )}
+
+                  {isSeller && trade.status === 'paid' && (
+                    <button onClick={() => updateTradeStatus('completed')}
+                      className="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-3 rounded-xl text-sm transition-colors mb-2">
+                      Release XMR to Buyer ✓
+                    </button>
+                  )}
+
+                  {isBuyer && trade.status === 'paid' && (
+                    <div className="bg-zinc-950 border border-zinc-700 rounded-lg p-4">
+                      <p className="text-sm text-zinc-300">⏳ Waiting for seller to confirm payment and release XMR...</p>
+                    </div>
+                  )}
+
+                  {trade.status === 'completed' && (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <p className="text-green-400 font-bold text-center">🎉 Trade Complete!</p>
+                      {isBuyer && <p className="text-sm text-zinc-400 text-center mt-1">XMR has been sent to your wallet.</p>}
+                    </div>
+                  )}
+
+                  {['pending', 'funded'].includes(trade.status) && (
+                    <button onClick={() => updateTradeStatus('cancelled')}
+                      className="w-full border border-zinc-800 hover:border-red-400/30 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-xs transition-colors mt-2">
+                      Cancel Trade
+                    </button>
+                  )}
+
+                  {['funded', 'paid'].includes(trade.status) && (
+                    <button onClick={() => updateTradeStatus('disputed')}
+                      className="w-full border border-zinc-800 hover:border-yellow-400/30 text-zinc-500 hover:text-yellow-400 py-2 rounded-xl text-xs transition-colors mt-1">
+                      Open Dispute
+                    </button>
+                  )}
+                </div>
+
+                {/* Chat */}
+                {user && (
+                  <div className="h-96">
+                    <TradeChat tradeId={trade.id} currentUserId={user.id} />
+                  </div>
                 )}
               </div>
             ) : isOwnListing ? (
@@ -301,50 +380,34 @@ export default function ListingPage() {
                 <Link href="/marketplace" className="text-[#FF6600] text-sm hover:underline mt-2 block">← Browse other offers</Link>
               </div>
             ) : (
-              /* Start trade form */
               <div className="border border-zinc-800 rounded-xl p-5">
                 <p className="text-sm font-bold mb-4">Start Trade</p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">
-                      Amount ({listing.currency})
-                    </label>
-                    <input
-                      type="number"
-                      value={amount}
-                      onChange={e => setAmount(e.target.value)}
+                    <label className="block text-xs text-zinc-500 uppercase tracking-wider mb-2">Amount ({listing.currency})</label>
+                    <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
                       placeholder={`${listing.min_amount} – ${listing.max_amount}`}
-                      min={listing.min_amount}
-                      max={listing.max_amount}
-                      className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF6600] placeholder-zinc-600"
-                    />
+                      className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF6600] placeholder-zinc-600" />
                     {amount && effectivePrice && (
                       <p className="text-xs text-zinc-400 mt-1.5">
-                        You receive: <span className="text-[#FF6600] font-bold">{(parseFloat(amount) / effectivePrice).toFixed(6)} XMR</span>
+                        You get: <span className="text-[#FF6600] font-bold">{((parseFloat(amount) / effectivePrice) * (1 - PLATFORM_FEE)).toFixed(6)} XMR</span>
+                        <span className="text-zinc-600 ml-1">(after 1% fee)</span>
                       </p>
                     )}
                   </div>
-
                   {error && <p className="text-red-400 text-xs">{error}</p>}
-
                   {user ? (
                     <button onClick={startTrade} disabled={starting}
                       className="w-full bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50">
                       {starting ? 'Starting...' : listing.type === 'sell' ? 'Buy XMR →' : 'Sell XMR →'}
                     </button>
                   ) : (
-                    <Link href="/auth" className="block w-full text-center bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl text-sm transition-colors">
+                    <Link href="/auth" className="block w-full text-center bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl text-sm transition-colors">
                       Login to Trade
                     </Link>
                   )}
+                  <p className="text-xs text-zinc-600 text-center">XMR held in escrow until payment confirmed</p>
                 </div>
-              </div>
-            )}
-
-            {/* Chat — only show if trade is active */}
-            {trade && user && (
-              <div className="h-96">
-                <TradeChat tradeId={trade.id} currentUserId={user.id} />
               </div>
             )}
           </div>

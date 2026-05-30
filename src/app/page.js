@@ -144,7 +144,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 fade-up fade-up-delay-3">
           {[
             {
-              href: "/swap",
+              href: "/marketplace", tag: "Trade", title: "P2P Marketplace", desc: "Buy and sell XMR privately. No KYC. No intermediaries.", cta: "Trade now →", }, { href: "/swap",
               tag: "Beginner",
               title: "How to get XMR",
               desc: "No-KYC step-by-step guide to buying Monero privately.",

@@ -144,22 +144,22 @@ export default function AccountPage() {
               <p className="text-zinc-600 text-sm">No trades yet.</p>
             ) : (
               <div className="space-y-3">
-                {trades.map(trade => (
+                {trades.filter(t => t && t.id).map(trade => (
                   <div key={trade.id} className="border border-zinc-800 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <span className="text-sm text-white font-bold">{trade.xmr_amount} XMR</span>
-                        <span className="text-sm text-zinc-400">for {trade.currency} {trade.fiat_amount}</span>
+                        <span className="text-sm text-white font-bold">{trade.xmr_amount || '—'} XMR</span>
+                        <span className="text-sm text-zinc-400">for {trade.currency || ''} {trade.fiat_amount || ''}</span>
                       </div>
                       <span className={`text-xs font-bold ${trade.status === 'completed' ? 'text-green-400' : trade.status === 'cancelled' ? 'text-zinc-500' : trade.status === 'disputed' ? 'text-red-400' : 'text-yellow-400'}`}>
-                        {trade.status.toUpperCase()}
+                        {(trade.status || 'unknown').toUpperCase()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-zinc-500">
-                        {new Date(trade.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {trade.created_at ? new Date(trade.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                       </span>
-                      <Link href={`/marketplace/${trade.listing_id}`} className="text-xs text-zinc-400 hover:text-white px-3 py-1.5 border border-zinc-800 rounded-lg transition-colors">View</Link>
+                      <Link href={`/marketplace/${trade.listing_id || ''}`} className="text-xs text-zinc-400 hover:text-white px-3 py-1.5 border border-zinc-800 rounded-lg transition-colors">View</Link>
                     </div>
                   </div>
                 ))}

@@ -112,3 +112,4 @@ For higher traffic, consider:
 - No cookies, no analytics, no tracking — by design
 - All price data attributed to CoinGecko in the footer
 - Not financial advice
+

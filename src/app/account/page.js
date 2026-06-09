@@ -181,7 +181,7 @@ export default function AccountPage() {
                         </span>
                       </span>
                       <span>·</span>
-                      <span>{new Date(trade.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                      <span>{new Date(trade.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <Link href={`/marketplace/${trade.listing_id}`} className="text-xs text-zinc-400 hover:text-white px-3 py-1.5 border border-zinc-800 rounded-lg transition-colors">
                       View

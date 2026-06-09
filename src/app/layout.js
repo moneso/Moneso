@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import PresenceTracker from "@/components/PresenceTracker";
 
 export const metadata = {
   title: "mone.so — Monero Toolkit",
@@ -19,7 +20,11 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body>{children}<Analytics /></body>
+      <body>
+        {children}
+        <PresenceTracker />
+        <Analytics />
+      </body>
     </html>
   );
 }

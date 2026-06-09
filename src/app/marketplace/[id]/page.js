@@ -71,7 +71,7 @@ export default function ListingPage() {
       .select('*')
       .eq('listing_id', id)
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-      .not('status', 'in', '("completed","cancelled")')
+      // include all statuses so completed trades still show
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
@@ -143,6 +143,10 @@ export default function ListingPage() {
       content: `Status: ${TRADE_STATUS[newStatus]?.label}`,
       is_system: true,
     })
+    if (newStatus === 'completed') {
+      await supabase.rpc('increment_trade_count', { user_id: trade.buyer_id })
+      await supabase.rpc('increment_trade_count', { user_id: trade.seller_id })
+    }
     setTrade(data)
   }
 

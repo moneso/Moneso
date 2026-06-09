@@ -283,6 +283,10 @@ export default function ListingPage() {
                       <button onClick={copyAddress} className={`w-full py-2 rounded-lg text-xs font-bold transition-colors ${copied ? 'bg-green-500 text-black' : 'bg-zinc-800 hover:bg-zinc-700 text-white'}`}>
                         {copied ? '✓ Copied!' : 'Copy Address'}
                       </button>
+                      <button onClick={() => updateTradeStatus('funded')}
+                        className="w-full bg-[#FF6600] hover:bg-[#e55a00] text-black font-bold py-3 rounded-xl text-sm transition-colors mt-3">
+                        I've Sent XMR to Escrow ✓
+                      </button>
                     </div>
                   )}
 

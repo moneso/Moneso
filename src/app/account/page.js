@@ -181,12 +181,7 @@ export default function AccountPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-xs text-zinc-500">
-                      <span>
-                        {trade.buyer_id === user?.id ? 'Gekauft von' : 'Verkauft an'}{' '}
-                        <span className="text-zinc-300 font-medium">
-                          {trade.buyer_id === user?.id ? (trade.seller?.username || '—') : (trade.buyer?.username || '—')}
-                        </span>
-                      </span>
+                      <sp
                       <span>·</span>
                       <span>{new Date(trade.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>

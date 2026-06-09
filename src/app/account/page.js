@@ -181,7 +181,6 @@ export default function AccountPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-xs text-zinc-500">
-                      <sp
                       <span>·</span>
                       <span>{new Date(trade.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>

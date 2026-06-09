@@ -400,7 +400,7 @@ export default function ListingPage() {
                         ) : completedTrade ? (
               <div className="border border-zinc-800 rounded-xl p-5 space-y-4">
                 <div className={completedTrade.status === 'completed' ? 'bg-green-500/10 border border-green-500/20 rounded-xl p-5 text-center' : 'bg-zinc-900 border border-zinc-700 rounded-xl p-5 text-center'}>
-                  <p className={trade.status === 'completed' ? 'text-green-400 font-bold text-xl mb-2' : 'text-zinc-400 font-bold text-xl mb-2'}>
+                  <p className={completedTrade.status === 'completed' ? 'text-green-400 font-bold text-xl mb-2' : 'text-zinc-400 font-bold text-xl mb-2'}>
                     {completedTrade.status === 'completed' ? '🎉 Trade Complete!' : '❌ Trade Cancelled'}
                   </p>
                   {completedTrade.status === 'completed' && isSeller && (

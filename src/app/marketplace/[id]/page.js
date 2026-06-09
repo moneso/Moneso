@@ -356,7 +356,8 @@ export default function ListingPage() {
                   {trade.status === 'completed' && (
                     <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                       <p className="text-green-400 font-bold text-center">🎉 Trade Complete!</p>
-                      {isBuyer && <p className="text-sm text-zinc-400 text-center mt-1">XMR has been sent to your wallet.</p>}
+                      {isBuyer && <p className="text-sm text-zinc-400 text-center mt-1">The seller will release XMR to your wallet address.</p>}
+                {isSeller && <p className="text-sm text-zinc-400 text-center mt-1">Release XMR from your escrow wallet to the buyer's address.</p>}
                     </div>
                   )}
 

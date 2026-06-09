@@ -29,7 +29,7 @@ export default function AccountPage() {
     const [{ data: prof }, { data: list }, { data: tr }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.from('listings').select('*').eq('trader_id', userId).order('created_at', { ascending: false }),
-      supabase.from('trades').select('*, buyer:profiles!trades_buyer_id_fkey(username), seller:profiles!trades_seller_id_fkey(username)').or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).order('created_at', { ascending: false }).limit(20),
+      supabase.from('trades').select('*').or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).order('created_at', { ascending: false }).limit(20),
     ])
     setProfile(prof)
     setXmrAddress(prof?.xmr_address || '')

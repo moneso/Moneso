@@ -22,6 +22,19 @@ export default function AccountPage() {
       if (!data?.user) { router.push('/auth'); return }
       setUser(data.user)
       fetchData(data.user.id)
+
+      // Realtime auto-refresh
+      const channel = supabase
+        .channel('account-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'trades' }, () => {
+          fetchData(data.user.id)
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, () => {
+          fetchData(data.user.id)
+        })
+        .subscribe()
+
+      return () => supabase.removeChannel(channel)
     })
   }, [])
 

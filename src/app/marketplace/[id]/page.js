@@ -383,7 +383,35 @@ export default function ListingPage() {
                   </div>
                 )}
               </div>
-            ) : isOwnListing ? (
+                        ) : trade && ['completed', 'cancelled'].includes(trade.status) ? (
+              <div className="border border-zinc-800 rounded-xl p-5 space-y-4">
+                <div className={trade.status === 'completed' ? 'bg-green-500/10 border border-green-500/20 rounded-xl p-5 text-center' : 'bg-zinc-900 border border-zinc-700 rounded-xl p-5 text-center'}>
+                  <p className={trade.status === 'completed' ? 'text-green-400 font-bold text-xl mb-2' : 'text-zinc-400 font-bold text-xl mb-2'}>
+                    {trade.status === 'completed' ? '🎉 Trade Complete!' : '❌ Trade Cancelled'}
+                  </p>
+                  {trade.status === 'completed' && isSeller && (
+                    <p className="text-sm text-zinc-300 mb-1">Send <span className="text-white font-bold">{trade.xmr_amount} XMR</span> from your escrow wallet to the buyer now.</p>
+                  )}
+                  {trade.status === 'completed' && isBuyer && (
+                    <p className="text-sm text-zinc-300 mb-1">The seller will send <span className="text-white font-bold">{trade.xmr_amount} XMR</span> to your wallet.</p>
+                  )}
+                  {trade.status === 'cancelled' && (
+                    <p className="text-sm text-zinc-400">This trade was cancelled. No funds were exchanged.</p>
+                  )}
+                </div>
+                <div className="border border-zinc-800 rounded-xl p-4 text-sm space-y-2">
+                  <div className="flex justify-between"><span className="text-zinc-500">Amount</span><span className="text-[#FF6600] font-bold">{trade.xmr_amount} XMR</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">Fiat</span><span>{trade.currency} {trade.fiat_amount}</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">Rate</span><span>{trade.currency} {trade.xmr_price_at_creation?.toLocaleString('en', { maximumFractionDigits: 2 })}</span></div>
+                </div>
+                <Link href="/account" className="block w-full text-center bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl text-sm transition-colors">
+                  View in Account History →
+                </Link>
+                <Link href="/marketplace" className="block w-full text-center border border-zinc-800 hover:border-[#FF6600] text-zinc-400 hover:text-[#FF6600] font-bold py-3 rounded-xl text-sm transition-colors">
+                  Back to Marketplace
+                </Link>
+              </div>
+) : isOwnListing ? (
               <div className="border border-zinc-800 rounded-xl p-5 text-center">
                 <p className="text-zinc-500 text-sm">This is your listing.</p>
                 <Link href="/marketplace" className="text-[#FF6600] text-sm hover:underline mt-2 block">← Browse other offers</Link>

@@ -29,7 +29,7 @@ export default function AccountPage() {
     const [{ data: prof }, { data: list }, { data: tr }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.from('listings').select('*').eq('trader_id', userId).order('created_at', { ascending: false }),
-      supabase.from('trades').select('*').or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).order('created_at', { ascending: false }).limit(10),
+      supabase.from('trades').select('*, buyer:profiles!trades_buyer_id_fkey(username), seller:profiles!trades_seller_id_fkey(username)').or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).order('created_at', { ascending: false }).limit(20),
     ])
     setProfile(prof)
     setXmrAddress(prof?.xmr_address || '')
@@ -160,22 +160,34 @@ export default function AccountPage() {
             ) : (
               <div className="space-y-3">
                 {trades.map(trade => (
-                  <div key={trade.id} className="border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
+                  <div key={trade.id} className="border border-zinc-800 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-white font-medium">{trade.xmr_amount} XMR</span>
+                      <span className="text-sm text-white font-bold">{trade.xmr_amount} XMR</span>
                       <span className="text-sm text-zinc-400">for {trade.currency} {trade.fiat_amount}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold ${
-                        trade.status === 'completed' ? 'text-green-400' :
-                        trade.status === 'cancelled' ? 'text-zinc-500' :
-                        trade.status === 'disputed' ? 'text-red-400' : 'text-yellow-400'
-                      }`}>{trade.status.toUpperCase()}</span>
-                      <Link href={`/marketplace/${trade.listing_id}`} className="text-xs text-zinc-400 hover:text-white px-3 py-1.5 border border-zinc-800 rounded-lg transition-colors">
-                        View
-                      </Link>
-                    </div>
+                    <span className={`text-xs font-bold ${
+                      trade.status === 'completed' ? 'text-green-400' :
+                      trade.status === 'cancelled' ? 'text-zinc-500' :
+                      trade.status === 'disputed' ? 'text-red-400' : 'text-yellow-400'
+                    }`}>{trade.status.toUpperCase()}</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-xs text-zinc-500">
+                      <span>
+                        {trade.buyer_id === user?.id ? 'Gekauft von' : 'Verkauft an'}{' '}
+                        <span className="text-zinc-300 font-medium">
+                          {trade.buyer_id === user?.id ? (trade.seller?.username || '—') : (trade.buyer?.username || '—')}
+                        </span>
+                      </span>
+                      <span>·</span>
+                      <span>{new Date(trade.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                    </div>
+                    <Link href={`/marketplace/${trade.listing_id}`} className="text-xs text-zinc-400 hover:text-white px-3 py-1.5 border border-zinc-800 rounded-lg transition-colors">
+                      View
+                    </Link>
+                  </div>
+                </div>
                 ))}
               </div>
             )}

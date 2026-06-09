@@ -71,7 +71,6 @@ export default function ListingPage() {
       .select('*')
       .eq('listing_id', id)
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-      .not('status', 'in', '("completed","cancelled")')
       .order('created_at', { ascending: false })
       .limit(1)
       .single()

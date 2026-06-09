@@ -71,7 +71,7 @@ export default function ListingPage() {
       .select('*')
       .eq('listing_id', id)
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-      // include all statuses so completed trades still show
+      .not('status', 'in', '("completed","cancelled")')
       .order('created_at', { ascending: false })
       .limit(1)
       .single()
@@ -238,7 +238,7 @@ export default function ListingPage() {
 
           {/* Right: Trade panel */}
           <div className="lg:col-span-2 space-y-4">
-            {trade ? (
+            {trade && !['completed', 'cancelled'].includes(trade.status) ? (
               <div className="space-y-4">
                 {/* Progress */}
                 <div className="border border-zinc-800 rounded-xl p-5">
